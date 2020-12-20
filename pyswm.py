@@ -151,11 +151,11 @@ def compute_tendency_v(u, eta, g, f, dy):
     return res
 
 
-def compute_tendency_eta(u, v, h, dx, dy, dy_u, dx_v):
+def compute_tendency_eta(u, v, h_u, h_v, dx, dy, dy_u, dx_v):
     """Compute sum of right hand side terms of the continuity equation."""
     res = init_var(0., u.shape)
-    res += zonal_convergence(u, h, dx, dy, dy_u)
-    res += meridional_convergence(v, h, dx, dy, dx_v)
+    res += zonal_convergence(u, h_u, dx, dy, dy_u)
+    res += meridional_convergence(v, h_v, dx, dy, dx_v)
     return res
 
 
@@ -168,7 +168,7 @@ def integrate_FW(var, g_var, dt):
 
 def integrate_heaps(
     u, v, eta,
-    h, f, g,
+    h_u, h_v, f, g,
     dt, dx_eta, dy_eta, dx_u, dy_u, dx_v, dy_v
 ):
     """Compute state at next time step using Heaps (1972).
@@ -184,7 +184,7 @@ def integrate_heaps(
     # )
     eta_next = integrate_FW(
         eta,
-        compute_tendency_eta(u, v, h, dx_eta, dy_eta, dy_u, dx_v),
+        compute_tendency_eta(u, v, h_u, h_v, dx_eta, dy_eta, dy_u, dx_v),
         dt
     )
     u_next = integrate_FW(
