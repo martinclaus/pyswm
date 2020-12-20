@@ -159,6 +159,13 @@ def compute_tendency_η(u, v, H, Δx, Δy, Δy_u, Δx_v):
     return res
 
 
+def integrate_FW(var, g_var, Δt):
+    """Compute state at next time step using Euler Forward."""
+    var_next = create_var(var.shape)
+    var_next[...] = var + Δt * g_var
+    return var_next
+
+
 def integrate_heaps(u, v, η, H, f, g, Δt, Δx_η, Δy_η, Δx_u, Δy_u, Δx_v, Δy_v):
     """Compute state at next time step using Heaps (1972).
 
@@ -168,10 +175,22 @@ def integrate_heaps(u, v, η, H, f, g, Δt, Δx_η, Δy_η, Δx_u, Δy_u, Δx_v,
 
     returns η_(n+1), u_(n+1), v_(n+1)
     """
-    η_next, u_next, v_next = (
-        init_var(0., η.shape), init_var(0., u.shape), init_var(0., v.shape)
+    # η_next, u_next, v_next = (
+    #     init_var(0., η.shape), init_var(0., u.shape), init_var(0., v.shape)
+    # )
+    η_next = integrate_FW(
+        η,
+        compute_tendency_η(u, v, H, Δx_η, Δy_η, Δy_u, Δx_v),
+        Δt
     )
-    η_next = η + Δt * compute_tendency_η(u, v, H, Δx_η, Δy_η, Δy_u, Δx_v)
-    u_next = u + Δt * compute_tendency_u(v, η_next, g, f, Δx_u)
-    v_next = v + Δt * compute_tendency_v(u, η, g, f, Δy_v)
+    u_next = integrate_FW(
+        u,
+        compute_tendency_u(v, η_next, g, f, Δx_u),
+        Δt
+    )
+    v_next = integrate_FW(
+        u,
+        compute_tendency_v(u, η, g, f, Δy_v),
+        Δt
+    )
     return η_next, u_next, v_next
