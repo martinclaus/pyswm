@@ -2,7 +2,7 @@
 System of PDE to solve:
 u_t = -gη_x + fv
 v_t = -gη_y - fu
-η_t = -(Hu)_x - (Hv)_y
+η_t = -(hu)_x - (hv)_y
 
 Coriolis parameter f may be constant, linearly varying
 or prop. to sin(θ).
@@ -105,32 +105,32 @@ def meridional_coriolis(u, f):
     return res
 
 
-def zonal_convergence(u, H, dx, dy, dy_u):
+def zonal_convergence(u, h, dx, dy, dy_u):
     """Compute convergence of zonal flow.
 
-    Returns -(Hu)_x taking account of the curvature of the grid.
+    Returns -(hu)_x taking account of the curvature of the grid.
     """
     res = create_var(u.shape)
     for j in range(u.shape[-2]):
         for i in range(u.shape[-1]):
             res[j, i] = (-1) * (
-                H[j, cx(i + 1)] * u[j, cx(i + 1)] * dy_u[j, cx(i + 1)]
-                - H[j, i] * u[j, i] * dy_u[j, i]
+                h[j, cx(i + 1)] * u[j, cx(i + 1)] * dy_u[j, cx(i + 1)]
+                - h[j, i] * u[j, i] * dy_u[j, i]
             ) / (dx[j, i] * dy[j, i])
     return res
 
 
-def meridional_convergence(v, H, dx, dy, dx_v):
+def meridional_convergence(v, h, dx, dy, dx_v):
     """Compute convergence of meridional flow.
 
-    Returns -(Hv)_y taking account of the curvature of the grid.
+    Returns -(hv)_y taking account of the curvature of the grid.
     """
     res = create_var(v.shape)
     for j in range(v.shape[-2]):
         for i in range(v.shape[-1]):
             res[j, i] = (-1) * (
-                H[cy(j + 1), i] * v[cy(j + 1), i] * dx_v[cy(j + 1), i]
-                - H[j, i] * v[j, i] * dx_v[j, i]
+                h[cy(j + 1), i] * v[cy(j + 1), i] * dx_v[cy(j + 1), i]
+                - h[j, i] * v[j, i] * dx_v[j, i]
             ) / (dx[j, i] * dy[j, i])
     return res
 
@@ -151,11 +151,11 @@ def compute_tendency_v(u, eta, g, f, dy):
     return res
 
 
-def compute_tendency_eta(u, v, H, dx, dy, dy_u, dx_v):
+def compute_tendency_eta(u, v, h, dx, dy, dy_u, dx_v):
     """Compute sum of right hand side terms of the continuity equation."""
     res = init_var(0., u.shape)
-    res += zonal_convergence(u, H, dx, dy, dy_u)
-    res += meridional_convergence(v, H, dx, dy, dx_v)
+    res += zonal_convergence(u, h, dx, dy, dy_u)
+    res += meridional_convergence(v, h, dx, dy, dx_v)
     return res
 
 
@@ -168,7 +168,7 @@ def integrate_FW(var, g_var, dt):
 
 def integrate_heaps(
     u, v, eta,
-    H, f, g,
+    h, f, g,
     dt, dx_eta, dy_eta, dx_u, dy_u, dx_v, dy_v
 ):
     """Compute state at next time step using Heaps (1972).
@@ -184,7 +184,7 @@ def integrate_heaps(
     # )
     eta_next = integrate_FW(
         eta,
-        compute_tendency_eta(u, v, H, dx_eta, dy_eta, dy_u, dx_v),
+        compute_tendency_eta(u, v, h, dx_eta, dy_eta, dy_u, dx_v),
         dt
     )
     u_next = integrate_FW(
