@@ -79,7 +79,7 @@ def zonal_coriolis(v, f):
     res = create_var(v.shape)
     for j in range(v.shape[-2]):
         for i in range(v.shape[-1]):
-            res[j, i] = f * .25 * (
+            res[j, i] = f[j, i] * .25 * (
                 v[j, i]
                 + v[cy(j + 1), i]
                 + v[cy(j + 1), cx(i - 1)]
@@ -96,7 +96,7 @@ def meridional_coriolis(u, f):
     res = create_var(u.shape)
     for j in range(u.shape[-2]):
         for i in range(u.shape[-1]):
-            res[j, i] = (-1.) * f * .25 * (
+            res[j, i] = (-1.) * f[j, i] * .25 * (
                 u[j, i]
                 + u[cy(j - 1), i]
                 + u[cy(j - 1), cx(i + 1)]
