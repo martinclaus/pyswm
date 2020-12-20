@@ -42,32 +42,32 @@ def init_var(val=0., *args, **kwargs):
 
 
 # initialize variables
-u_t, v_t, η_t, u_n, v_n, η_n, u_np1, v_np1, η_np1 = [
+u_t, v_t, eta_t, u_n, v_n, eta_n, u_np1, v_np1, eta_np1 = [
     init_var() for _ in range(9)
 ]
 
 
-def zonal_pressure_gradient(η, g, Δx):
+def zonal_pressure_gradient(eta, g, dx):
     """Compute zonal pressure gradient.
 
     Returns -gη_x using centred differences and cyclic boundary conditions.
     """
-    res = create_var(η.shape)
-    for j in range(η.shape[-2]):
-        for i in range(η.shape[-1]):
-            res[j, i] = -g * (η[j, i] - η[j, cx(i - 1)]) / Δx[j, i]
+    res = create_var(eta.shape)
+    for j in range(eta.shape[-2]):
+        for i in range(eta.shape[-1]):
+            res[j, i] = -g * (eta[j, i] - eta[j, cx(i - 1)]) / dx[j, i]
     return res
 
 
-def meridional_pressure_gradient(η, g, Δy):
+def meridional_pressure_gradient(eta, g, dy):
     """Compute meridional pressure gradient.
 
     Returns -gη_y using centred differences and cyclic boundary conditions.
     """
-    res = create_var(η.shape)
-    for j in range(η.shape[-2]):
-        for i in range(η.shape[-1]):
-            res[j, i] = -g * (η[j, i] - η[cy(j), i]) / Δy[j, i]
+    res = create_var(eta.shape)
+    for j in range(eta.shape[-2]):
+        for i in range(eta.shape[-1]):
+            res[j, i] = -g * (eta[j, i] - eta[cy(j), i]) / dy[j, i]
     return res
 
 
@@ -105,7 +105,7 @@ def meridional_coriolis(u, f):
     return res
 
 
-def zonal_convergence(u, H, Δx, Δy, Δy_u):
+def zonal_convergence(u, H, dx, dy, dy_u):
     """Compute convergence of zonal flow.
 
     Returns -(Hu)_x taking account of the curvature of the grid.
@@ -114,13 +114,13 @@ def zonal_convergence(u, H, Δx, Δy, Δy_u):
     for j in range(u.shape[-2]):
         for i in range(u.shape[-1]):
             res[j, i] = (-1) * (
-                H[j, cx(i + 1)] * u[j, cx(i + 1)] * Δy_u[j, cx(i + 1)]
-                - H[j, i] * u[j, i] * Δy_u[j, i]
-            ) / (Δx[j, i] * Δy[j, i])
+                H[j, cx(i + 1)] * u[j, cx(i + 1)] * dy_u[j, cx(i + 1)]
+                - H[j, i] * u[j, i] * dy_u[j, i]
+            ) / (dx[j, i] * dy[j, i])
     return res
 
 
-def meridional_convergence(v, H, Δx, Δy, Δx_v):
+def meridional_convergence(v, H, dx, dy, dx_v):
     """Compute convergence of meridional flow.
 
     Returns -(Hv)_y taking account of the curvature of the grid.
@@ -129,68 +129,72 @@ def meridional_convergence(v, H, Δx, Δy, Δx_v):
     for j in range(v.shape[-2]):
         for i in range(v.shape[-1]):
             res[j, i] = (-1) * (
-                H[cy(j + 1), i] * v[cy(j + 1), i] * Δx_v[cy(j + 1), i]
-                - H[j, i] * v[j, i] * Δx_v[j, i]
-            ) / (Δx[j, i] * Δy[j, i])
+                H[cy(j + 1), i] * v[cy(j + 1), i] * dx_v[cy(j + 1), i]
+                - H[j, i] * v[j, i] * dx_v[j, i]
+            ) / (dx[j, i] * dy[j, i])
     return res
 
 
-def compute_tendency_u(v, η, g, f, Δx):
+def compute_tendency_u(v, eta, g, f, dx):
     """Compute sum of right hand side terms of the zonal momentum equation."""
     res = init_var(0., v.shape)
-    res += zonal_pressure_gradient(η, g, Δx)
+    res += zonal_pressure_gradient(eta, g, dx)
     res += zonal_coriolis(v, f)
     return res
 
 
-def compute_tendency_v(u, η, g, f, Δy):
+def compute_tendency_v(u, eta, g, f, dy):
     """Compute sum of right hand side terms of the zonal momentum equation."""
     res = init_var(0., u.shape)
-    res += meridional_pressure_gradient(η, g, Δy)
+    res += meridional_pressure_gradient(eta, g, dy)
     res += meridional_coriolis(u, f)
     return res
 
 
-def compute_tendency_η(u, v, H, Δx, Δy, Δy_u, Δx_v):
+def compute_tendency_eta(u, v, H, dx, dy, dy_u, dx_v):
     """Compute sum of right hand side terms of the continuity equation."""
     res = init_var(0., u.shape)
-    res += zonal_convergence(u, H, Δx, Δy, Δy_u)
-    res += meridional_convergence(v, H, Δx, Δy, Δx_v)
+    res += zonal_convergence(u, H, dx, dy, dy_u)
+    res += meridional_convergence(v, H, dx, dy, dx_v)
     return res
 
 
-def integrate_FW(var, g_var, Δt):
+def integrate_FW(var, g_var, dt):
     """Compute state at next time step using Euler Forward."""
     var_next = create_var(var.shape)
-    var_next[...] = var + Δt * g_var
+    var_next[...] = var + dt * g_var
     return var_next
 
 
-def integrate_heaps(u, v, η, H, f, g, Δt, Δx_η, Δy_η, Δx_u, Δy_u, Δx_v, Δy_v):
+def integrate_heaps(
+    u, v, eta,
+    H, f, g,
+    dt, dx_eta, dy_eta, dx_u, dy_u, dx_v, dy_v
+):
     """Compute state at next time step using Heaps (1972).
 
-    η_(n+1) = η_n + Δt * G_η(u_n, v_n)
-    u_(n+1) = u_n + Δt * G_u(η_(n+1), v_n)
-    v_(n+1) = v_n + Δt * G_v(η_(n+1), u_(n+1))
+    η_(n+1) = η_n + dt * G_η(u_n, v_n)
+    u_(n+1) = u_n + dt * G_u(η_(n+1), v_n)
+    v_(n+1) = v_n + dt * G_v(η_(n+1), u_(n+1))
 
     returns η_(n+1), u_(n+1), v_(n+1)
     """
-    # η_next, u_next, v_next = (
-    #     init_var(0., η.shape), init_var(0., u.shape), init_var(0., v.shape)
+    # eta_next, u_next, v_next = (
+    #     init_var(0., eta.shape), init_var(0., u.shape), init_var(0., v.shape)
     # )
-    η_next = integrate_FW(
-        η,
-        compute_tendency_η(u, v, H, Δx_η, Δy_η, Δy_u, Δx_v),
-        Δt
+    eta_next = integrate_FW(
+        eta,
+        compute_tendency_eta(u, v, H, dx_eta, dy_eta, dy_u, dx_v),
+        dt
     )
     u_next = integrate_FW(
         u,
-        compute_tendency_u(v, η_next, g, f, Δx_u),
-        Δt
+        compute_tendency_u(v, eta_next, g, f, dx_u),
+        dt
     )
     v_next = integrate_FW(
         u,
-        compute_tendency_v(u, η, g, f, Δy_v),
-        Δt
+        compute_tendency_v(u, eta, g, f, dy_v),
+        dt
     )
-    return η_next, u_next, v_next
+    return eta_next, u_next, v_next
