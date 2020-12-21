@@ -91,7 +91,7 @@ def zonal_coriolis(v, f):
 def meridional_coriolis(u, f):
     """Compute Coriolis term in zonal momentum equation.
 
-    Returns -fu using a four point average of v.
+    Returns -fu using a four point average of u.
     """
     res = create_var(u.shape)
     for j in range(u.shape[-2]):
