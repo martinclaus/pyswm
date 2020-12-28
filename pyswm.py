@@ -33,12 +33,15 @@ def cy(j): return cyclic_index(j, ny)
 
 def create_var(shape=(ny, nx), dtype=np.float64):
     """Allocate empty numpy array."""
-    return np.empty(shape, dtype=dtype)
+    buffer = np.empty(shape, dtype=dtype)
+    return buffer
 
 
 def init_var(val=0., *args, **kwargs):
     """Initialize new variable with val."""
-    return val * create_var(*args, **kwargs)
+    var = create_var(*args, **kwargs)
+    var[...] = val
+    return var
 
 
 def zonal_pressure_gradient(eta, g, dx):
