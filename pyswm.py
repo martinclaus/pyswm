@@ -44,7 +44,7 @@ def init_var(val=0., *args, **kwargs):
     return var
 
 
-def zonal_pressure_gradient(eta, g, dx):
+def zonal_pressure_gradient(eta, g, dx, ocean_eta):
     """Compute zonal pressure gradient.
 
     Returns -gη_x using centred differences and cyclic boundary conditions.
@@ -52,11 +52,18 @@ def zonal_pressure_gradient(eta, g, dx):
     res = create_var(eta.shape)
     for j in range(eta.shape[-2]):
         for i in range(eta.shape[-1]):
-            res[j, i] = -g * (eta[j, i] - eta[j, cx(i - 1)]) / dx[j, i]
+            res[j, i] = (
+                -g 
+                * (
+                    eta[j, i] * ocean_eta[j, i]
+                    - eta[j, cx(i - 1)] * ocean_eta[j, cx(i - 1)]
+                )
+                / dx[j, i]
+            )
     return res
 
 
-def meridional_pressure_gradient(eta, g, dy):
+def meridional_pressure_gradient(eta, g, dy, ocean_eta):
     """Compute meridional pressure gradient.
 
     Returns -gη_y using centred differences and cyclic boundary conditions.
@@ -64,11 +71,17 @@ def meridional_pressure_gradient(eta, g, dy):
     res = create_var(eta.shape)
     for j in range(eta.shape[-2]):
         for i in range(eta.shape[-1]):
-            res[j, i] = -g * (eta[j, i] - eta[cy(j), i]) / dy[j, i]
+            res[j, i] = (
+                -g
+                * (
+                    eta[j, i] * ocean_eta[j, i]
+                    - eta[cy(j - 1), i] * ocean_eta[cy(j - 1), i]
+                )
+                / dy[j, i])
     return res
 
 
-def zonal_coriolis(v, f):
+def zonal_coriolis(v, f, ocean_v):
     """Compute Coriolis term in zonal momentum equation.
 
     Returns +fv using a four point average of v.
@@ -77,15 +90,15 @@ def zonal_coriolis(v, f):
     for j in range(v.shape[-2]):
         for i in range(v.shape[-1]):
             res[j, i] = f[j, i] * .25 * (
-                v[j, i]
-                + v[cy(j + 1), i]
-                + v[cy(j + 1), cx(i - 1)]
-                + v[j, cx(i - 1)]
+                v[j, i] * ocean_v[j, i]
+                + v[cy(j + 1), i] * ocean_v[cy(j + 1), i]
+                + v[cy(j + 1), cx(i - 1)] * ocean_v[cy(j + 1), cx(i - 1)]
+                + v[j, cx(i - 1)] * ocean_v[j, cx(i - 1)]
             )
     return res
 
 
-def meridional_coriolis(u, f):
+def meridional_coriolis(u, f, ocean_u):
     """Compute Coriolis term in zonal momentum equation.
 
     Returns -fu using a four point average of u.
@@ -94,15 +107,15 @@ def meridional_coriolis(u, f):
     for j in range(u.shape[-2]):
         for i in range(u.shape[-1]):
             res[j, i] = (-1.) * f[j, i] * .25 * (
-                u[j, i]
-                + u[cy(j - 1), i]
-                + u[cy(j - 1), cx(i + 1)]
-                + u[j, cx(i + 1)]
+                u[j, i] * ocean_u[j, i]
+                + u[cy(j - 1), i] * ocean_u[cy(j - 1), i]
+                + u[cy(j - 1), cx(i + 1)] * ocean_u[cy(j - 1), cx(i + 1)]
+                + u[j, cx(i + 1)] * ocean_u[j, cx(i + 1)]
             )
     return res
 
 
-def zonal_convergence(u, h, dx, dy, dy_u):
+def zonal_convergence(u, h, dx, dy, dy_u, ocean_u):
     """Compute convergence of zonal flow.
 
     Returns -(hu)_x taking account of the curvature of the grid.
@@ -111,13 +124,13 @@ def zonal_convergence(u, h, dx, dy, dy_u):
     for j in range(u.shape[-2]):
         for i in range(u.shape[-1]):
             res[j, i] = (-1) * (
-                h[j, cx(i + 1)] * u[j, cx(i + 1)] * dy_u[j, cx(i + 1)]
-                - h[j, i] * u[j, i] * dy_u[j, i]
+                h[j, cx(i + 1)] * u[j, cx(i + 1)] * dy_u[j, cx(i + 1)] * ocean_u[j, cx(i + 1)]
+                - h[j, i] * u[j, i] * dy_u[j, i] * ocean_u[j, i]
             ) / (dx[j, i] * dy[j, i])
     return res
 
 
-def meridional_convergence(v, h, dx, dy, dx_v):
+def meridional_convergence(v, h, dx, dy, dx_v, ocean_v):
     """Compute convergence of meridional flow.
 
     Returns -(hv)_y taking account of the curvature of the grid.
@@ -126,8 +139,8 @@ def meridional_convergence(v, h, dx, dy, dx_v):
     for j in range(v.shape[-2]):
         for i in range(v.shape[-1]):
             res[j, i] = (-1) * (
-                h[cy(j + 1), i] * v[cy(j + 1), i] * dx_v[cy(j + 1), i]
-                - h[j, i] * v[j, i] * dx_v[j, i]
+                h[cy(j + 1), i] * v[cy(j + 1), i] * dx_v[cy(j + 1), i] * ocean_v[cy(j + 1), i]
+                - h[j, i] * v[j, i] * dx_v[j, i] * ocean_v[j, i]
             ) / (dx[j, i] * dy[j, i])
     return res
 
