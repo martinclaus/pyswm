@@ -41,12 +41,6 @@ def init_var(val=0., *args, **kwargs):
     return val * create_var(*args, **kwargs)
 
 
-# initialize variables
-u_t, v_t, eta_t, u_n, v_n, eta_n, u_np1, v_np1, eta_np1 = [
-    init_var() for _ in range(9)
-]
-
-
 def zonal_pressure_gradient(eta, g, dx):
     """Compute zonal pressure gradient.
 
